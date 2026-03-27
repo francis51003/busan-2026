@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 釜山 6 天 5 夜賞櫻之旅</title>
+    
+    <!-- 替換為相容性最高、無 CORS 阻擋的 CDN 來源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+    
+    <style>
+        /* 隱藏捲軸但保持可滑動 */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 燈箱動畫 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .lightbox-bg { animation: fadeIn 0.2s ease-out forwards; }
+        .lightbox-img { animation: scaleIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const defaultItinerary = [
+          {
+            day: 1, date: "4/2 (二)", title: "抵達釜山・西面初探",
+            events: [
+              { id: "1-1", time: "14:15 - 17:55", title: "釜山航空 (高雄飛金海)", type: "flight", tag: "" },
+              { id: "1-2", time: "19:30", title: "入境拿行李，搭計程車或輕軌", type: "transit", tag: "" },
+              { id: "1-3", time: "20:30", title: "入住：京城旅店 (西面站9號)", type: "hotel", tag: "" },
+              { id: "1-4", time: "21:00", title: "晚餐：松亭三代豬肉湯飯", type: "food", tag: "安心吃：無香菜、高蛋白" },
+            ]
+          },
+          {
+            day: 2, date: "4/3 (三)", title: "漫步櫻花雨",
+            events: [
+              { id: "2-1", time: "08:30", title: "從西面京城旅店出發", type: "transit", tag: "" },
+              { id: "2-2", time: "09:00 - 18:00", title: "釜山賞櫻名所一日遊", type: "attraction", tag: "" },
+              { id: "2-3", time: "18:30", title: "晚餐：83烤肉 (西面店)", type: "food", tag: "安心吃：純肉無海鮮、無香菜" },
+              { id: "2-4", time: "20:00", title: "西面商圈逛街採買", type: "attraction", tag: "" },
+            ]
+          },
+          {
+            day: 3, date: "4/4 (四)", title: "甘川童話與廣安夜景",
+            events: [
+              { id: "3-1", time: "08:00", title: "京城旅店退房，寄放行李", type: "hotel", tag: "" },
+              { id: "3-2", time: "09:30", title: "甘川文化村 (找小王子與天脊)", type: "attraction", tag: "附：參觀路線重點", imageAlt: "甘川文化村", imageSrc: "https://images.unsplash.com/photo-1587323869038-16e78887b407?auto=format&fit=crop&q=80&w=800" },
+              { id: "3-3", time: "11:00", title: "Flipbook Studio 手翻相簿", type: "vbp-blue", tag: "【VBP 藍區 1】" },
+              { id: "3-4", time: "12:30", title: "午餐：Gamcheon 傳統牛肉湯", type: "food", tag: "安心吃：美味牛肉、避開香菜" },
+              { id: "3-5", time: "14:00 - 14:15", title: "影島大橋 (觀賞開橋儀式)", type: "attraction", tag: "" },
+              { id: "3-6", time: "16:00", title: "回西面拿行李，搭車往海雲台", type: "transit", tag: "" },
+              { id: "3-7", time: "17:00", title: "入住：海雲台 Urban Stay", type: "hotel", tag: "" },
+              { id: "3-8", time: "18:30", title: "晚餐：Nasari 食堂 (海鮮煎餅)", type: "food", tag: "安心吃：請店家去殼或不加蝦" },
+              { id: "3-9", time: "20:00", title: "廣安里無人機表演", type: "attraction", tag: "" },
+              { id: "3-10", time: "21:30", title: "宵夜：炸雞或水邊最高豬肉湯飯", type: "food", tag: "" },
+            ]
+          },
+          {
+            day: 4, date: "4/5 (五)", title: "海雲台海岸與極致舒壓",
+            events: [
+              { id: "4-1", time: "09:30", title: "海雲台市場：古來思魚糕", type: "food", tag: "安心吃：優質魚漿蛋白質" },
+              { id: "4-2", time: "10:30", title: "早午餐：螞蟻家 海雲台店", type: "food", tag: "安心吃：點辣炒章魚，絕對無殼蝦" },
+              { id: "4-3", time: "11:45", title: "漫步前往藍線公園尾浦站", type: "transit", tag: "" },
+              { id: "4-4", time: "12:00 - 12:30", title: "天空膠囊列車 (尾浦➔青沙浦)", type: "attraction", tag: "已預約 12:00" },
+              { id: "4-5", time: "12:30", title: "青沙浦海岸漫步與平交道", type: "attraction", tag: "" },
+              { id: "4-6", time: "13:15", title: "海岸列車 (青沙浦➔松亭)", type: "vbp-blue", tag: "【VBP 藍區 2】" },
+              { id: "4-7", time: "14:00", title: "Skyline Luge 釜山斜坡滑車", type: "vbp-purple", tag: "【VBP 紫區 1】" },
+              { id: "4-8", time: "16:00", title: "搭東海線或計程車往 Centum City", type: "transit", tag: "" },
+              { id: "4-9", time: "16:30 - 19:30", title: "Spa Land 汗蒸幕 (新世界內)", type: "vbp-purple", tag: "【VBP 紫區 2】" },
+              { id: "4-10", time: "19:30", title: "晚餐：新世界百貨周邊美食", type: "food", tag: "安心吃：客製無香菜無殼蝦" },
+            ]
+          },
+          {
+            day: 5, date: "4/6 (六)", title: "松島海景與白淺灘",
+            events: [
+              { id: "5-1", time: "08:30", title: "早餐：嚴湧帛豬肉湯飯", type: "food", tag: "安心吃：大量青蔥無香菜" },
+              { id: "5-2", time: "09:30", title: "退房，將行李帶至南浦洞站寄放", type: "transit", tag: "" },
+              { id: "5-3", time: "10:00", title: "松島海上纜車", type: "vbp-blue", tag: "【VBP 藍區 3】" },
+              { id: "5-4", time: "12:00", title: "影島海女村", type: "attraction", tag: "" },
+              { id: "5-5", time: "15:00", title: "白淺灘文化村 (足浴咖啡廳)", type: "attraction", tag: "" },
+              { id: "5-6", time: "18:00", title: "晚餐：札嘎其市場", type: "food", tag: "安心吃：挑選無殼海鮮或烤魚" },
+              { id: "5-7", time: "19:00", title: "南浦洞商圈逛街、取行李", type: "attraction", tag: "" },
+              { id: "5-8", time: "21:00", title: "入住：Airsky 旅店 (西釜山)", type: "hotel", tag: "" },
+            ]
+          },
+          {
+            day: 6, date: "4/7 (日)", title: "滿載而歸",
+            events: [
+              { id: "6-1", time: "08:30", title: "Airsky 旅店退房", type: "hotel", tag: "" },
+              { id: "6-2", time: "09:00", title: "抵達金海機場，辦理登機", type: "transit", tag: "" },
+              { id: "6-3", time: "11:25", title: "釜山航空 (金海飛高雄)", type: "flight", tag: "" },
+            ]
+          }
+        ];
+
+        // 預設行李清單
+        const defaultChecklist = [
+          { id: "c1", text: "護照與身分證件", done: false },
+          { id: "c2", text: "Visit Busan Pass 憑證", done: false },
+          { id: "c3", text: "網卡 / eSIM", done: false },
+          { id: "c4", text: "轉接頭與充電線", done: false },
+          { id: "c5", text: "個人常備藥物", done: false },
+          { id: "c6", text: "韓幣現金與信用卡", done: false }
+        ];
+
+        function App() {
+          // 初始化時讀取手機記憶體 (localStorage)
+          const [itinerary, setItinerary] = useState(() => {
+            const saved = localStorage.getItem('myBusanItinerary');
+            return saved ? JSON.parse(saved) : defaultItinerary;
+          });
+          const [customImages, setCustomImages] = useState(() => {
+            const saved = localStorage.getItem('myBusanImages');
+            return saved ? JSON.parse(saved) : { gallery: [] };
+          });
+          // 行李清單狀態
+          const [checklist, setChecklist] = useState(() => {
+            const saved = localStorage.getItem('myBusanChecklist');
+            return saved ? JSON.parse(saved) : defaultChecklist;
+          });
+          
+          const [activeDay, setActiveDay] = useState(1);
+          const [activeView, setActiveView] = useState('timeline'); // 'timeline' | 'resources' | 'checklist'
+          const [isEditing, setIsEditing] = useState(false);
+          const [newItemText, setNewItemText] = useState("");
+          
+          // 燈箱狀態
+          const [lightboxImage, setLightboxImage] = useState(null);
+
+          // 確保 customImages.gallery 存在
+          useEffect(() => {
+            if (!customImages.gallery) {
+              setCustomImages(prev => ({ ...prev, gallery: [] }));
+            }
+          }, []);
+
+          // 每次狀態改變，自動存入手機記憶體
+          useEffect(() => {
+            localStorage.setItem('myBusanItinerary', JSON.stringify(itinerary));
+          }, [itinerary]);
+
+          useEffect(() => {
+            localStorage.setItem('myBusanImages', JSON.stringify(customImages));
+          }, [customImages]);
+
+          useEffect(() => {
+            localStorage.setItem('myBusanChecklist', JSON.stringify(checklist));
+          }, [checklist]);
+
+          // 鎖定燈箱開啟時的背景捲動
+          useEffect(() => {
+            if (lightboxImage) {
+              document.body.style.overflow = 'hidden';
+            } else {
+              document.body.style.overflow = 'unset';
+            }
+          }, [lightboxImage]);
+
+          const getIcon = (type) => {
+            switch (type) {
+              case 'flight': return "✈️"; case 'transit': return "🚇";
+              case 'hotel': return "🏨"; case 'food': return "🍽️";
+              case 'vbp-blue': return "🎫"; case 'vbp-purple': return "🎟️";
+              default: return "📍";
+            }
+          };
+
+          // --- 編輯行程功能區塊 ---
+          const handleEventChange = (eventId, field, value) => {
+            setItinerary(itinerary.map(day => {
+              if (day.day === activeDay) {
+                return { ...day, events: day.events.map(ev => ev.id === eventId ? { ...ev, [field]: value } : ev) };
+              }
+              return day;
+            }));
+          };
+
+          const moveEvent = (index, direction) => {
+            const newItin = [...itinerary];
+            const dayIdx = newItin.findIndex(d => d.day === activeDay);
+            const evs = [...newItin[dayIdx].events];
+            if (direction === 'up' && index > 0) {
+              [evs[index - 1], evs[index]] = [evs[index], evs[index - 1]];
+            } else if (direction === 'down' && index < evs.length - 1) {
+              [evs[index], evs[index + 1]] = [evs[index + 1], evs[index]];
+            }
+            newItin[dayIdx].events = evs;
+            setItinerary(newItin);
+          };
+
+          const addEvent = () => {
+            const newItin = [...itinerary];
+            const dayIdx = newItin.findIndex(d => d.day === activeDay);
+            newItin[dayIdx].events.push({
+              id: Date.now().toString(), time: "12:00", title: "新增行程", type: "attraction", tag: ""
+            });
+            setItinerary(newItin);
+          };
+
+          const deleteEvent = (eventId) => {
+            const newItin = [...itinerary];
+            const dayIdx = newItin.findIndex(d => d.day === activeDay);
+            newItin[dayIdx].events = newItin[dayIdx].events.filter(e => e.id !== eventId);
+            setItinerary(newItin);
+          };
+
+          // --- 相簿上傳功能區塊 ---
+          const handleImageUpload = (imageKey, e) => {
+            const file = e.target.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                setCustomImages(prev => ({ ...prev, [imageKey]: reader.result }));
+              };
+              reader.readAsDataURL(file);
+            }
+          };
+
+          const handleGalleryUpload = (e) => {
+             const file = e.target.files[0];
+             if (file) {
+               const reader = new FileReader();
+               reader.onloadend = () => {
+                 setCustomImages(prev => {
+                     const currentGallery = prev.gallery || [];
+                     return { ...prev, gallery: [...currentGallery, { id: Date.now().toString(), url: reader.result }] };
+                 });
+               };
+               reader.readAsDataURL(file);
+             }
+          };
+
+          const deleteGalleryImage = (id) => {
+              setCustomImages(prev => ({
+                  ...prev,
+                  gallery: prev.gallery.filter(img => img.id !== id)
+              }));
+          };
+
+          // --- 行李清單功能區塊 ---
+          const addChecklistItem = () => {
+            if (newItemText.trim()) {
+              setChecklist([...checklist, { id: Date.now().toString(), text: newItemText.trim(), done: false }]);
+              setNewItemText("");
+            }
+          };
+          const toggleChecklistItem = (id) => {
+            setChecklist(checklist.map(item => item.id === id ? { ...item, done: !item.done } : item));
+          };
+          const deleteChecklistItem = (id) => {
+            setChecklist(checklist.filter(item => item.id !== id));
+          };
+
+          const currentDayData = itinerary.find(d => d.day === activeDay);
+
+          return (
+            <div className="min-h-screen p-2 md:p-8 max-w-4xl mx-auto">
+              
+              {/* --- 全螢幕圖片燈箱 --- */}
+              {lightboxImage && (
+                <div 
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 lightbox-bg"
+                  onClick={() => setLightboxImage(null)}
+                >
+                  <button 
+                    className="absolute top-4 right-4 md:top-8 md:right-8 bg-black/50 hover:bg-white/20 text-white w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold transition-colors"
+                    onClick={(e) => { e.stopPropagation(); setLightboxImage(null); }}
+                  >
+                    ×
+                  </button>
+                  <img 
+                    src={lightboxImage} 
+                    className="max-w-full max-h-[90vh] object-contain lightbox-img rounded-lg shadow-2xl" 
+                    onClick={(e) => e.stopPropagation()} 
+                  />
+                </div>
+              )}
+
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 relative">
+                
+                {/* 頂部標題列 */}
+                <div className="bg-gradient-to-r from-pink-400 to-rose-500 p-4 md:p-6 text-white flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                      <h1 className="text-xl md:text-2xl font-bold mb-1">🌸 釜山 6 天 5 夜賞櫻之旅</h1>
+                      <p className="text-pink-100 text-xs md:text-sm">⏰ 專屬完美接軌版・飲食嚴格把關</p>
+                    </div>
+                    {/* 一鍵導航神器按鈕 */}
+                    <a 
+                      href="https://comap.app/" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-[#1F2937] hover:bg-black text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md flex items-center gap-1 transition-colors w-full md:w-auto justify-center"
+                    >
+                      🧭 打開導航神器 (comap.app)
+                    </a>
+                  </div>
+                  
+                  {/* 功能切換導覽列 */}
+                  <div className="flex flex-wrap gap-2 w-full">
+                    <button onClick={() => setActiveView('timeline')} className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeView === 'timeline' ? 'bg-white text-rose-500 shadow' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                      📝 行程
+                    </button>
+                    <button onClick={() => setActiveView('resources')} className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeView === 'resources' ? 'bg-white text-rose-500 shadow' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                      🗺️ 附圖
+                    </button>
+                    <button onClick={() => setActiveView('checklist')} className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeView === 'checklist' ? 'bg-white text-rose-500 shadow' : 'bg-white/20 text-white hover:bg-white/30'}`}>
+                      🎒 行李
+                    </button>
+                    
+                    {/* 只有在行程模式才顯示編輯按鈕 */}
+                    {activeView === 'timeline' && (
+                      <button onClick={() => setIsEditing(!isEditing)} className={`flex-1 min-w-[80px] px-3 py-2 rounded-lg font-medium text-sm transition-colors border ${isEditing ? 'bg-yellow-400 text-yellow-900 border-yellow-400 shadow' : 'bg-transparent border-white/50 text-white hover:bg-white/20'}`}>
+                        {isEditing ? "💾 完成" : "✏️ 編輯"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 檢視畫面路由 */}
+                {activeView === 'checklist' ? (
+                  /* --- 行李清單畫面 --- */
+                  <div className="p-4 md:p-6 space-y-6">
+                    <h2 className="text-lg font-bold text-gray-800 border-b pb-2 flex items-center gap-2">🎒 專屬行李清單 (自動記憶)</h2>
+                    
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={newItemText}
+                        onChange={(e) => setNewItemText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
+                        placeholder="想帶什麼？輸入後按新增..." 
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-400" 
+                      />
+                      <button 
+                        onClick={addChecklistItem} 
+                        className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-3 rounded-xl font-bold transition-colors shadow-sm"
+                      >
+                        新增
+                      </button>
+                    </div>
+
+                    <ul className="space-y-3 mt-4">
+                      {checklist.map(item => (
+                        <li key={item.id} className="flex items-center gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                          <input 
+                            type="checkbox" 
+                            checked={item.done} 
+                            onChange={() => toggleChecklistItem(item.id)} 
+                            className="w-6 h-6 text-rose-500 rounded border-gray-300 focus:ring-rose-500 cursor-pointer" 
+                          />
+                          <span className={`flex-1 text-lg font-medium transition-colors ${item.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                            {item.text}
+                          </span>
+                          <button 
+                            onClick={() => deleteChecklistItem(item.id)} 
+                            className="text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors"
+                          >
+                            ❌
+                          </button>
+                        </li>
+                      ))}
+                      {checklist.length === 0 && (
+                        <div className="text-center text-gray-400 py-8">清單空空的，趕快加入要帶的東西吧！</div>
+                      )}
+                    </ul>
+                  </div>
+
+                ) : activeView === 'resources' ? (
+                  /* --- 實用附圖畫面 --- */
+                  <div className="p-4 md:p-6 space-y-6">
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <h2 className="text-lg font-bold text-gray-800">🗺️ 旅遊參考附圖</h2>
+                      <span className="text-xs text-rose-500 font-bold bg-rose-50 px-2 py-1 rounded">🔍 點擊圖片可放大</span>
+                    </div>
+                    
+                    {/* 地鐵圖區塊 */}
+                    <div className="border rounded-xl overflow-hidden shadow-sm relative group">
+                      <div className="p-3 bg-gray-50 font-bold border-b flex justify-between items-center">
+                        <span>🚇 釜山中文版地鐵圖</span>
+                        <label className="bg-rose-100 text-rose-600 px-3 py-1 rounded text-xs cursor-pointer hover:bg-rose-200 transition-colors">
+                          📷 替換圖片
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload('subwayMap', e)} />
+                        </label>
+                      </div>
+                      <div className="relative cursor-pointer" onClick={() => setLightboxImage(customImages.subwayMap || "https://images.unsplash.com/photo-1546874177-9e664ce781b2?auto=format&fit=crop&q=80&w=800")}>
+                        <img 
+                          src={customImages.subwayMap || "https://images.unsplash.com/photo-1546874177-9e664ce781b2?auto=format&fit=crop&q=80&w=800"} 
+                          className="w-full h-48 object-cover md:h-64 transition-transform duration-300 group-hover:scale-105" 
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                           <span className="text-white bg-black/50 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">放大檢視</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 甘川攻略區塊 */}
+                    <div className="border rounded-xl overflow-hidden shadow-sm relative group">
+                      <div className="p-3 bg-gray-50 font-bold border-b flex justify-between items-center">
+                        <span>📍 甘川洞文化村攻略</span>
+                        <label className="bg-rose-100 text-rose-600 px-3 py-1 rounded text-xs cursor-pointer hover:bg-rose-200 transition-colors">
+                          📷 替換圖片
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload('gamcheonMap', e)} />
+                        </label>
+                      </div>
+                      <div className="relative cursor-pointer" onClick={() => setLightboxImage(customImages.gamcheonMap || "https://images.unsplash.com/photo-1587323869038-16e78887b407?auto=format&fit=crop&q=80&w=800")}>
+                        <img 
+                          src={customImages.gamcheonMap || "https://images.unsplash.com/photo-1587323869038-16e78887b407?auto=format&fit=crop&q=80&w=800"} 
+                          className="w-full h-48 object-cover md:h-64 transition-transform duration-300 group-hover:scale-105" 
+                        />
+                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                           <span className="text-white bg-black/50 px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">放大檢視</span>
+                        </div>
+                      </div>
+                      <p className="p-3 text-xs text-gray-600 bg-white">💡 可以點擊上方按鈕，把您 PDF 裡的截圖上傳替換掉情境圖！</p>
+                    </div>
+
+                    {/* 專屬自由相簿區塊 */}
+                    <div className="pt-4 border-t-2 border-dashed border-gray-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                📸 我的專屬圖庫
+                                <span className="text-xs font-normal text-gray-500">(想買的、想吃的)</span>
+                            </h3>
+                            <label className="bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-bold cursor-pointer hover:bg-rose-600 transition-colors shadow-sm">
+                                ➕ 新增照片
+                                <input type="file" accept="image/*" className="hidden" onChange={handleGalleryUpload} />
+                            </label>
+                        </div>
+                        
+                        {(!customImages.gallery || customImages.gallery.length === 0) ? (
+                            <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center text-gray-400">
+                                <p>還沒有照片喔！點擊右上角按鈕上傳想吃的餐廳或伴手禮截圖吧！</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {customImages.gallery.map(img => (
+                                    <div key={img.id} className="relative aspect-square border rounded-lg overflow-hidden shadow-sm group cursor-pointer">
+                                        <img 
+                                            src={img.url} 
+                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                            onClick={() => setLightboxImage(img.url)}
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); deleteGalleryImage(img.id); }}
+                                            className="absolute top-1 right-1 bg-white/80 hover:bg-red-500 hover:text-white text-gray-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors shadow-sm"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                  </div>
+
+                ) : (
+                  /* --- 行程表畫面 --- */
+                  <>
+                    {/* 天數導覽列 */}
+                    <div className="flex overflow-x-auto bg-gray-50 border-b scrollbar-hide">
+                      {itinerary.map((d) => (
+                        <button key={d.day} onClick={() => setActiveDay(d.day)} className={`flex-shrink-0 px-4 md:px-6 py-3 md:py-4 transition-colors border-b-2 ${activeDay === d.day ? "border-rose-500 text-rose-600 bg-rose-50/50" : "border-transparent text-gray-500"}`}>
+                          <div className="text-xs font-bold opacity-70">Day {d.day}</div>
+                          <div className="text-sm font-medium">{d.date}</div>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* 行程內容 */}
+                    <div className="p-4 md:p-6">
+                      <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-6">{currentDayData.title}</h2>
+                      <div className="relative border-l-2 border-gray-100 ml-4 space-y-5 md:space-y-6">
+                        {currentDayData.events.map((event, index) => (
+                          <div key={event.id} className="relative pl-6 md:pl-8">
+                            <div className="absolute -left-[15px] top-1 bg-white border border-gray-200 w-7 h-7 flex items-center justify-center rounded-full shadow-sm text-sm">
+                              {getIcon(event.type)}
+                            </div>
+                            
+                            <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 shadow-sm">
+                              {isEditing ? (
+                                <div className="flex flex-col gap-2">
+                                  <div className="flex gap-2">
+                                    <input type="text" value={event.time} onChange={(e) => handleEventChange(event.id, 'time', e.target.value)} className="w-20 px-2 py-1 text-xs border rounded bg-gray-50" />
+                                    <input type="text" value={event.title} onChange={(e) => handleEventChange(event.id, 'title', e.target.value)} className="flex-1 px-2 py-1 text-sm font-medium border rounded bg-gray-50" />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <input type="text" value={event.tag} placeholder="加入標籤" onChange={(e) => handleEventChange(event.id, 'tag', e.target.value)} className="flex-1 px-2 py-1 text-xs border rounded bg-gray-50 mr-2" />
+                                    <div className="flex gap-1">
+                                      <button onClick={() => moveEvent(index, 'up')} disabled={index===0} className="p-1 text-gray-400 hover:text-blue-500 disabled:opacity-30">⬆️</button>
+                                      <button onClick={() => moveEvent(index, 'down')} disabled={index===currentDayData.events.length-1} className="p-1 text-gray-400 hover:text-blue-500 disabled:opacity-30">⬇️</button>
+                                      <button onClick={() => deleteEvent(event.id)} className="p-1 text-gray-400 hover:text-red-500 ml-2">❌</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <div className="text-xs md:text-sm font-bold text-rose-500 mb-1">{event.time}</div>
+                                  <div className="font-medium text-gray-800 text-base md:text-lg">{event.title}</div>
+                                  {event.tag && <span className="inline-block mt-2 text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-md">{event.tag}</span>}
+                                  {event.imageSrc && !isEditing && (
+                                    <img 
+                                        src={customImages.gamcheonMap || event.imageSrc} 
+                                        className="mt-3 w-full rounded-lg shadow-sm border max-h-[150px] object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                                        onClick={() => setLightboxImage(customImages.gamcheonMap || event.imageSrc)}
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {isEditing && (
+                          <div className="pl-6 md:pl-8 pt-2">
+                            <button onClick={addEvent} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-xl hover:bg-gray-50 text-sm">
+                              ➕ 新增行程
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {/* 底部提醒 */}
+                <div className="bg-gray-50 p-3 md:p-4 text-center text-xs text-gray-500 flex justify-center gap-3 md:gap-4">
+                  <span>🎫 藍區 (3)</span>
+                  <span>🎟️ 紫區 (2)</span>
+                  <span className="text-green-600 font-bold">✓ 無殼蝦保護</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
